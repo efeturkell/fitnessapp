@@ -66,6 +66,16 @@
     </div>
   </header>
 
+  <!-- Decorative side panels (wide screens only) -->
+  <div class="hidden xl:block fixed inset-y-0 left-0 w-[260px] pointer-events-none" aria-hidden="true">
+    <div class="absolute inset-0 bg-cover bg-center opacity-25" style="background-image:url('https://images.unsplash.com/photo-1734443544776-7161343f09d2?q=80&amp;w=600&amp;auto=format&amp;fit=crop')"></div>
+    <div class="absolute inset-0" style="background:linear-gradient(90deg, rgba(9,9,11,0) 0%, rgba(9,9,11,1) 92%), linear-gradient(180deg, rgba(9,9,11,1) 0%, rgba(9,9,11,0) 15%, rgba(9,9,11,0) 85%, rgba(9,9,11,1) 100%);"></div>
+  </div>
+  <div class="hidden xl:block fixed inset-y-0 right-0 w-[260px] pointer-events-none" aria-hidden="true">
+    <div class="absolute inset-0 bg-cover bg-center opacity-25" style="background-image:url('https://images.unsplash.com/photo-1734443544776-7161343f09d2?q=80&amp;w=600&amp;auto=format&amp;fit=crop'); transform: scaleX(-1);"></div>
+    <div class="absolute inset-0" style="background:linear-gradient(270deg, rgba(9,9,11,0) 0%, rgba(9,9,11,1) 92%), linear-gradient(180deg, rgba(9,9,11,1) 0%, rgba(9,9,11,0) 15%, rgba(9,9,11,0) 85%, rgba(9,9,11,1) 100%);"></div>
+  </div>
+
   <main class="max-w-lg mx-auto px-4 pt-5 space-y-8">
 
     <!-- Profile selector -->
@@ -135,6 +145,10 @@
         <p class="text-xs text-zinc-700 mt-1">İlk antrenmanını yukarıdan ekle</p>
       </div>
     </section>
+
+    <p class="text-center text-[10px] text-zinc-700 pb-4">
+      Fotoğraf: <a href="https://unsplash.com/@fodelwdc" target="_blank" rel="noopener" class="underline hover:text-zinc-500">Fares Hamouche</a> / Unsplash
+    </p>
   </main>
 
   <!-- Add profile modal -->

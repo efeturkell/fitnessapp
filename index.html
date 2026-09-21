@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Antrenman Takip">
+<meta name="theme-color" content="#09090b">
+<title>Antrenman Takip</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Inter', 'sans-serif'] },
+        colors: {
+          accent: {
+            DEFAULT: '#f97316',
+            50: '#fff7ed', 100: '#ffedd5', 400: '#fb923c',
+            500: '#f97316', 600: '#ea580c', 700: '#c2410c'
+          }
+        }
+      }
+    }
+  }
+</script>
+<style>
+  html, body { background-color: #09090b; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 999px; }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type="number"] { -moz-appearance: textfield; }
+  input[type="date"] { color-scheme: dark; }
+  .tap-scale:active { transform: scale(0.96); }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in-up { animation: fadeInUp 0.25s ease-out; }
+  @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(6px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+  .modal-in { animation: modalIn 0.18s ease-out; }
+</style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 font-sans min-h-screen pb-16">
+
+  <!-- Top bar -->
+  <header class="sticky top-0 z-20 bg-zinc-950/90 backdrop-blur border-b border-zinc-800 px-4 py-4">
+    <div class="max-w-lg mx-auto flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center text-accent">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6.5 6.5 17.5 17.5M6.5 6.5l-2 2M6.5 6.5l2-2M17.5 17.5l2-2M17.5 17.5l-2 2M4 12h2M18 12h2M8.5 12h7"/>
+        </svg>
+      </div>
+      <div class="min-w-0">
+        <h1 class="text-lg font-extrabold tracking-tight text-white leading-none">Antrenman Takip</h1>
+        <p id="sync-status" class="text-xs text-zinc-500 mt-0.5 truncate">Bağlanıyor…</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-lg mx-auto px-4 pt-5 space-y-8">
+
+    <!-- Profile selector -->
+    <section>
+      <h2 class="text-sm font-bold text-zinc-400 uppercase tracking-wide mb-3">Profil</h2>
+      <div id="profile-bar" class="flex items-start gap-4 overflow-x-auto no-scrollbar pb-1">
+        <p class="text-sm text-zinc-600 py-4">Yükleniyor…</p>
+      </div>
+    </section>
+
+    <!-- New entry form -->
+    <section class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+      <h2 class="text-sm font-bold text-zinc-400 uppercase tracking-wide mb-4">Yeni Kayıt</h2>
+      <form id="entry-form" class="space-y-4">
+
+        <div>
+          <label class="block text-sm font-medium text-zinc-400 mb-1.5">Tarih</label>
+          <input type="date" id="entry-date" required
+            class="w-full rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-base text-white focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-zinc-400 mb-1.5">Hareket Adı</label>
+          <input type="text" id="entry-exercise" required placeholder="Örn: Bench Press" autocomplete="off"
+            class="w-full rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-base text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-zinc-400 mb-2">Setler</label>
+          <div id="sets-container" class="space-y-2"></div>
+          <button type="button" id="add-set-btn"
+            class="tap-scale mt-2 w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-700 text-accent font-semibold py-3 hover:bg-zinc-800/60 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Set Ekle
+          </button>
+        </div>
+
+        <button type="submit"
+          class="tap-scale w-full rounded-xl bg-accent hover:bg-accent-600 text-white font-bold text-lg py-4 shadow-lg shadow-accent/20 transition">
+          Antrenman Kaydını Ekle
+        </button>
+      </form>
+    </section>
+
+    <!-- History -->
+    <section>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-bold text-zinc-400 uppercase tracking-wide">Geçmiş</h2>
+        <span id="entry-count" class="text-xs text-zinc-500"></span>
+      </div>
+
+      <div class="relative mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>
+        </svg>
+        <input type="text" id="search-input" placeholder="Hareket ara (örn: Squat)"
+          class="w-full rounded-xl bg-zinc-900 border border-zinc-800 pl-10 pr-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
+      </div>
+
+      <div id="history-list" class="space-y-5"></div>
+
+      <div id="empty-state" class="hidden text-center py-14 text-zinc-600">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 mx-auto mb-3 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6.5 6.5 17.5 17.5M6.5 6.5l-2 2M6.5 6.5l2-2M17.5 17.5l2-2M17.5 17.5l-2 2M4 12h2M18 12h2M8.5 12h7"/>
+        </svg>
+        <p class="text-sm font-medium">Henüz kayıt yok</p>
+        <p class="text-xs text-zinc-700 mt-1">İlk antrenmanını yukarıdan ekle</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Add profile modal -->
+  <div id="profile-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm px-6">
+    <div class="modal-in w-full max-w-xs bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+      <h3 id="profile-modal-title" class="text-base font-bold text-white mb-1">Yeni Profil</h3>
+      <p id="profile-modal-subtitle" class="text-xs text-zinc-500 mb-4">Arkadaşının adını gir</p>
+      <input id="profile-name-input" type="text" placeholder="Örn: Ahmet" autocomplete="off" maxlength="20"
+        class="w-full rounded-xl bg-zinc-800 border border-zinc-700 px-4 py-3 text-base text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent mb-4">
+      <div class="flex gap-2">
+        <button id="profile-modal-cancel" type="button" class="tap-scale flex-1 rounded-xl bg-zinc-800 text-zinc-300 font-semibold py-3">İptal</button>
+        <button id="profile-modal-save" type="button" class="tap-scale flex-1 rounded-xl bg-accent text-white font-bold py-3">Ekle</button>
+      </div>
+    </div>
+  </div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+
+<script>
+(function () {
+  const LEGACY_ENTRIES_KEY = 'antrenmanTakipEntries';
+  const LEGACY_PROFILES_KEY = 'antrenmanTakipProfiles';
+  const ACTIVE_PROFILE_KEY = 'antrenmanTakipActiveProfile';
+  const PROFILE_COLORS = ['#f97316', '#3b82f6', '#22c55e', '#f43f5e', '#a855f7', '#eab308', '#06b6d4', '#ec4899'];
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBzsiQrENm-DZXixMye6qkaufWWBA-vJdU",
+    authDomain: "alonely-86ff8.firebaseapp.com",
+    projectId: "alonely-86ff8",
+    storageBucket: "alonely-86ff8.firebasestorage.app",
+    messagingSenderId: "67485295374",
+    appId: "1:67485295374:web:90bdd7268cce184d966d5f"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
+
+  const profilesCol = db.collection('profiles');
+  const entriesCol = db.collection('entries');
+
+  /** @type {{id:string, date:string, exercise:string, sets:{weight:number, reps:number}[], createdAt:number, profileId:string}[]} */
+  let entries = [];
+  /** @type {{id:string, name:string, color:string, createdAt:number}[]} */
+  let profiles = [];
+  let activeProfileId = localStorage.getItem(ACTIVE_PROFILE_KEY) || null;
+  let searchTerm = '';
+  let profilesLoaded = false;
+  let migrating = false;
+
+  const syncStatus = document.getElementById('sync-status');
+  const profileBar = document.getElementById('profile-bar');
+  const profileModal = document.getElementById('profile-modal');
+  const profileNameInput = document.getElementById('profile-name-input');
+
+  const form = document.getElementById('entry-form');
+  const dateInput = document.getElementById('entry-date');
+  const exerciseInput = document.getElementById('entry-exercise');
+  const setsContainer = document.getElementById('sets-container');
+  const addSetBtn = document.getElementById('add-set-btn');
+  const historyList = document.getElementById('history-list');
+  const emptyState = document.getElementById('empty-state');
+  const entryCount = document.getElementById('entry-count');
+  const searchInput = document.getElementById('search-input');
+
+  function loadJSON(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function makeId() {
+    return crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2);
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // --- Firebase auth + Firestore wiring ---
+  let listenersAttached = false;
+
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      syncStatus.textContent = 'Setlerini kaydet, geçmişini gör';
+      attachFirestoreListeners();
+    } else {
+      auth.signInAnonymously().catch((err) => {
+        console.error('Firebase auth error', err);
+        syncStatus.textContent = 'Bulut bağlantısı kurulamadı';
+      });
+    }
+  });
+
+  function attachFirestoreListeners() {
+    if (listenersAttached) return;
+    listenersAttached = true;
+
+    profilesCol.orderBy('createdAt').onSnapshot(handleProfilesSnapshot, (err) => {
+      console.error('Profiles listen error', err);
+      profileBar.innerHTML = `<p class="text-xs text-red-400 py-4">Profiller yüklenemedi. Firestore kurallarını ve Anonymous Authentication\'ı kontrol et.</p>`;
+    });
+
+    entriesCol.onSnapshot(handleEntriesSnapshot, (err) => {
+      console.error('Entries listen error', err);
+    });
+  }
+
+  async function bootstrapOrMigrate() {
+    const legacyProfiles = loadJSON(LEGACY_PROFILES_KEY, []);
+    const legacyEntries = loadJSON(LEGACY_ENTRIES_KEY, []);
+    const batch = db.batch();
+
+    if (legacyProfiles.length > 0) {
+      legacyProfiles.forEach(p => {
+        batch.set(profilesCol.doc(p.id), { name: p.name, color: p.color, createdAt: p.createdAt || Date.now() });
+      });
+      legacyEntries.forEach(e => {
+        if (!e.profileId) return;
+        batch.set(entriesCol.doc(e.id || makeId()), {
+          profileId: e.profileId, date: e.date, exercise: e.exercise, sets: e.sets, createdAt: e.createdAt || Date.now()
+        });
+      });
+    } else {
+      const first = { id: makeId(), name: 'Ben', color: PROFILE_COLORS[0], createdAt: Date.now() };
+      batch.set(profilesCol.doc(first.id), { name: first.name, color: first.color, createdAt: first.createdAt });
+      legacyEntries.forEach(e => {
+        batch.set(entriesCol.doc(e.id || makeId()), {
+          profileId: first.id, date: e.date, exercise: e.exercise, sets: e.sets, createdAt: e.createdAt || Date.now()
+        });
+      });
+    }
+
+    await batch.commit();
+    localStorage.removeItem(LEGACY_PROFILES_KEY);
+    localStorage.removeItem(LEGACY_ENTRIES_KEY);
+  }
+
+  async function handleProfilesSnapshot(snap) {
+    profiles = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (!profilesLoaded) {
+      profilesLoaded = true;
+      if (profiles.length === 0 && !migrating) {
+        migrating = true;
+        try {
+          await bootstrapOrMigrate();
+        } catch (err) {
+          console.error('Bootstrap/migrate failed', err);
+        }
+        migrating = false;
+        return; // the writes above will re-trigger this snapshot
+      }
+    }
+
+    if (profiles.length === 0) {
+      renderProfiles();
+      renderHistory();
+      return;
+    }
+
+    if (!activeProfileId || !profiles.some(p => p.id === activeProfileId)) {
+      activeProfileId = profiles[0].id;
+      localStorage.setItem(ACTIVE_PROFILE_KEY, activeProfileId);
+    }
+
+    renderProfiles();
+    renderHistory();
+  }
+
+  function handleEntriesSnapshot(snap) {
+    entries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderHistory();
+  }
+
+  // --- Profiles ---
+  function initials(name) {
+    return (name.trim().charAt(0) || '?').toUpperCase();
+  }
+
+  function renderProfiles() {
+    profileBar.innerHTML = profiles.map(p => {
+      const isActive = p.id === activeProfileId;
+      return `
+        <div class="flex flex-col items-center shrink-0 relative" style="width:60px">
+          <button type="button" class="profile-select-btn tap-scale" data-id="${p.id}">
+            <div class="w-14 h-14 rounded-full flex items-center justify-center text-lg font-extrabold text-white transition"
+              style="background-color:${p.color}; box-shadow:${isActive ? `0 0 0 3px #09090b, 0 0 0 5px ${p.color}` : 'none'}; opacity:${isActive ? '1' : '0.5'};">
+              ${initials(p.name)}
+            </div>
+          </button>
+          <button type="button" class="profile-edit-btn absolute -top-1 -left-1 w-5 h-5 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-400 flex items-center justify-center leading-none" data-id="${p.id}" aria-label="Profili düzenle">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+          ${profiles.length > 1 ? `
+            <button type="button" class="profile-delete-btn absolute -top-1 -right-1 w-5 h-5 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-400 flex items-center justify-center text-[10px] leading-none" data-id="${p.id}" aria-label="Profili sil">✕</button>
+          ` : ''}
+          <p class="text-[11px] mt-1.5 text-center truncate w-full ${isActive ? 'text-white font-bold' : 'text-zinc-500'}">${escapeHtml(p.name)}</p>
+        </div>
+      `;
+    }).join('') + `
+      <button type="button" id="add-profile-btn" class="tap-scale flex flex-col items-center shrink-0" style="width:60px">
+        <div class="w-14 h-14 rounded-full border-2 border-dashed border-zinc-700 flex items-center justify-center text-zinc-500">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </div>
+        <p class="text-[11px] mt-1.5 text-zinc-500">Ekle</p>
+      </button>
+    `;
+
+    profileBar.querySelectorAll('.profile-select-btn').forEach(btn => {
+      btn.addEventListener('click', () => selectProfile(btn.dataset.id));
+    });
+    profileBar.querySelectorAll('.profile-edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => openEditProfileModal(btn.dataset.id));
+    });
+    profileBar.querySelectorAll('.profile-delete-btn').forEach(btn => {
+      btn.addEventListener('click', () => deleteProfile(btn.dataset.id));
+    });
+    document.getElementById('add-profile-btn').addEventListener('click', openAddProfileModal);
+  }
+
+  function selectProfile(id) {
+    if (id === activeProfileId) return;
+    activeProfileId = id;
+    localStorage.setItem(ACTIVE_PROFILE_KEY, activeProfileId);
+    searchTerm = '';
+    searchInput.value = '';
+    renderProfiles();
+    renderHistory();
+  }
+
+  async function deleteProfile(id) {
+    if (profiles.length <= 1) return;
+    const profile = profiles.find(p => p.id === id);
+    if (!profile) return;
+    const count = entries.filter(e => e.profileId === id).length;
+    const msg = count > 0
+      ? `"${profile.name}" profilini ve ${count} kaydını silmek istediğine emin misin?`
+      : `"${profile.name}" profilini silmek istediğine emin misin?`;
+    if (!confirm(msg)) return;
+
+    try {
+      const batch = db.batch();
+      batch.delete(profilesCol.doc(id));
+      entries.filter(e => e.profileId === id).forEach(e => batch.delete(entriesCol.doc(e.id)));
+      await batch.commit();
+    } catch (err) {
+      console.error('Delete profile failed', err);
+    }
+  }
+
+  let editingProfileId = null;
+  const profileModalTitle = document.getElementById('profile-modal-title');
+  const profileModalSubtitle = document.getElementById('profile-modal-subtitle');
+  const profileModalSave = document.getElementById('profile-modal-save');
+
+  function showProfileModal() {
+    profileModal.classList.remove('hidden');
+    profileModal.classList.add('flex');
+    setTimeout(() => { profileNameInput.focus(); profileNameInput.select(); }, 50);
+  }
+
+  function openAddProfileModal() {
+    editingProfileId = null;
+    profileModalTitle.textContent = 'Yeni Profil';
+    profileModalSubtitle.textContent = 'Arkadaşının adını gir';
+    profileModalSave.textContent = 'Ekle';
+    profileNameInput.value = '';
+    showProfileModal();
+  }
+
+  function openEditProfileModal(id) {
+    const profile = profiles.find(p => p.id === id);
+    if (!profile) return;
+    editingProfileId = id;
+    profileModalTitle.textContent = 'Profili Düzenle';
+    profileModalSubtitle.textContent = 'Yeni ismi gir';
+    profileModalSave.textContent = 'Kaydet';
+    profileNameInput.value = profile.name;
+    showProfileModal();
+  }
+
+  function closeProfileModal() {
+    profileModal.classList.add('hidden');
+    profileModal.classList.remove('flex');
+    editingProfileId = null;
+  }
+
+  async function confirmProfileModal() {
+    const name = profileNameInput.value.trim();
+    if (!name) {
+      profileNameInput.classList.add('ring-2', 'ring-red-500');
+      setTimeout(() => profileNameInput.classList.remove('ring-2', 'ring-red-500'), 1000);
+      return;
+    }
+
+    if (editingProfileId) {
+      const id = editingProfileId;
+      closeProfileModal();
+      try {
+        await profilesCol.doc(id).update({ name });
+      } catch (err) {
+        console.error('Rename profile failed', err);
+      }
+      return;
+    }
+
+    const color = PROFILE_COLORS[profiles.length % PROFILE_COLORS.length];
+    const profile = { id: makeId(), name, color, createdAt: Date.now() };
+
+    activeProfileId = profile.id;
+    localStorage.setItem(ACTIVE_PROFILE_KEY, activeProfileId);
+    searchTerm = '';
+    searchInput.value = '';
+    closeProfileModal();
+
+    try {
+      await profilesCol.doc(profile.id).set({ name: profile.name, color: profile.color, createdAt: profile.createdAt });
+    } catch (err) {
+      console.error('Add profile failed', err);
+    }
+  }
+
+  document.getElementById('profile-modal-cancel').addEventListener('click', closeProfileModal);
+  profileModalSave.addEventListener('click', confirmProfileModal);
+  profileModal.addEventListener('click', (e) => { if (e.target === profileModal) closeProfileModal(); });
+  profileNameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); confirmProfileModal(); } });
+
+  // --- Entry form ---
+  function todayISO() {
+    const d = new Date();
+    const offset = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - offset * 60000);
+    return local.toISOString().slice(0, 10);
+  }
+
+  function addSetRow(weight = '', reps = '') {
+    const row = document.createElement('div');
+    row.className = 'set-row flex items-center gap-2';
+    row.innerHTML = `
+      <span class="set-index w-7 shrink-0 text-center text-xs font-bold text-zinc-500"></span>
+      <input type="number" inputmode="decimal" step="0.5" min="0" placeholder="Kg" value="${weight}"
+        class="set-weight w-full rounded-xl bg-zinc-800 border border-zinc-700 px-3 py-3 text-base text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
+      <span class="text-zinc-600 text-sm font-medium">×</span>
+      <input type="number" inputmode="numeric" step="1" min="0" placeholder="Tekrar" value="${reps}"
+        class="set-reps w-full rounded-xl bg-zinc-800 border border-zinc-700 px-3 py-3 text-base text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
+      <button type="button" class="remove-set-btn shrink-0 w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-red-500 hover:bg-red-500/10 transition" aria-label="Seti kaldır">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    `;
+    row.querySelector('.remove-set-btn').addEventListener('click', () => {
+      row.remove();
+      renumberSetRows();
+    });
+    setsContainer.appendChild(row);
+    renumberSetRows();
+  }
+
+  function renumberSetRows() {
+    const rows = setsContainer.querySelectorAll('.set-row');
+    rows.forEach((row, i) => {
+      row.querySelector('.set-index').textContent = i + 1;
+      row.querySelector('.remove-set-btn').classList.toggle('invisible', rows.length === 1);
+    });
+  }
+
+  function resetForm(keepDate) {
+    exerciseInput.value = '';
+    setsContainer.innerHTML = '';
+    addSetRow();
+    if (!keepDate) dateInput.value = todayISO();
+    exerciseInput.focus();
+  }
+
+  addSetBtn.addEventListener('click', () => addSetRow());
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const date = dateInput.value;
+    const exercise = exerciseInput.value.trim();
+    if (!date || !exercise || !activeProfileId) return;
+
+    const rows = setsContainer.querySelectorAll('.set-row');
+    const sets = [];
+    for (const row of rows) {
+      const weightVal = row.querySelector('.set-weight').value;
+      const repsVal = row.querySelector('.set-reps').value;
+      if (weightVal === '' || repsVal === '') continue;
+      const weight = parseFloat(weightVal);
+      const reps = parseInt(repsVal, 10);
+      if (isNaN(weight) || isNaN(reps) || weight < 0 || reps < 0) continue;
+      sets.push({ weight, reps });
+    }
+
+    if (sets.length === 0) {
+      rows.forEach(row => {
+        const weightField = row.querySelector('.set-weight');
+        const repsField = row.querySelector('.set-reps');
+        if (!weightField.value) weightField.classList.add('ring-2', 'ring-red-500');
+        if (!repsField.value) repsField.classList.add('ring-2', 'ring-red-500');
+      });
+      setTimeout(() => {
+        rows.forEach(row => {
+          row.querySelector('.set-weight').classList.remove('ring-2', 'ring-red-500');
+          row.querySelector('.set-reps').classList.remove('ring-2', 'ring-red-500');
+        });
+      }, 1200);
+      return;
+    }
+
+    const entry = { id: makeId(), date, exercise, sets, createdAt: Date.now(), profileId: activeProfileId };
+    resetForm(true);
+
+    try {
+      await entriesCol.doc(entry.id).set({
+        profileId: entry.profileId, date: entry.date, exercise: entry.exercise, sets: entry.sets, createdAt: entry.createdAt
+      });
+    } catch (err) {
+      console.error('Save entry failed', err);
+    }
+  });
+
+  async function deleteEntry(id) {
+    try {
+      await entriesCol.doc(id).delete();
+    } catch (err) {
+      console.error('Delete entry failed', err);
+    }
+  }
+
+  // --- Date formatting / grouping ---
+  function parseISO(iso) {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  function dateLabel(iso) {
+    const date = parseISO(iso);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+    const t = date.getTime();
+
+    let rel;
+    if (t === today.getTime()) rel = 'Bugün';
+    else if (t === yesterday.getTime()) rel = 'Dün';
+    else rel = date.toLocaleDateString('tr-TR', { weekday: 'long' });
+
+    const full = date.toLocaleDateString('tr-TR', {
+      day: 'numeric',
+      month: 'long',
+      year: date.getFullYear() === today.getFullYear() ? undefined : 'numeric'
+    });
+
+    return { rel, full };
+  }
+
+  function formatTime(ts) {
+    return new Date(ts).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function formatWeight(n) {
+    return Number.isInteger(n) ? String(n) : String(n).replace('.', ',');
+  }
+
+  function groupByDate(list) {
+    const groups = [];
+    let current = null;
+    for (const entry of list) {
+      if (!current || current.date !== entry.date) {
+        current = { date: entry.date, items: [] };
+        groups.push(current);
+      }
+      current.items.push(entry);
+    }
+    return groups;
+  }
+
+  // --- History rendering ---
+  function renderHistory() {
+    if (!activeProfileId) return;
+
+    const term = searchTerm.trim().toLocaleLowerCase('tr-TR');
+    const profileEntries = entries.filter(e => e.profileId === activeProfileId);
+    const filtered = profileEntries
+      .filter(e => !term || e.exercise.toLocaleLowerCase('tr-TR').includes(term))
+      .sort((a, b) => (b.date === a.date ? b.createdAt - a.createdAt : b.date.localeCompare(a.date)));
+
+    entryCount.textContent = profileEntries.length ? `${profileEntries.length} kayıt` : '';
+
+    if (filtered.length === 0) {
+      historyList.innerHTML = '';
+      emptyState.classList.remove('hidden');
+      emptyState.querySelector('p.text-sm').textContent = profileEntries.length === 0
+        ? 'Henüz kayıt yok'
+        : 'Sonuç bulunamadı';
+      emptyState.querySelector('p.text-xs').textContent = profileEntries.length === 0
+        ? 'İlk antrenmanını yukarıdan ekle'
+        : `"${searchTerm}" için eşleşme yok`;
+      return;
+    }
+
+    emptyState.classList.add('hidden');
+
+    const groups = groupByDate(filtered);
+
+    historyList.innerHTML = groups.map(group => {
+      const { rel, full } = dateLabel(group.date);
+      const cards = group.items.map(entry => `
+        <article class="fade-in-up bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+          <div class="flex items-start justify-between gap-3">
+            <h3 class="text-lg font-extrabold text-white leading-tight truncate min-w-0">${escapeHtml(entry.exercise)}</h3>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-[11px] text-zinc-600">${formatTime(entry.createdAt)}</span>
+              <button data-id="${entry.id}" class="delete-btn w-9 h-9 flex items-center justify-center rounded-xl text-red-500/80 hover:text-white hover:bg-red-600 transition" aria-label="Kaydı sil">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="mt-3 flex flex-wrap gap-1.5">
+            ${entry.sets.map((s, i) => `
+              <span class="text-xs font-semibold bg-zinc-800 text-zinc-300 rounded-lg px-2.5 py-1.5">
+                ${i + 1}. Set: <span class="text-white">${formatWeight(s.weight)} kg</span> × <span class="text-white">${s.reps} tekrar</span>
+              </span>
+            `).join('')}
+          </div>
+        </article>
+      `).join('');
+
+      return `
+        <div>
+          <div class="flex items-baseline gap-2 px-0.5 mb-2">
+            <h4 class="text-sm font-extrabold text-accent-400">${rel}</h4>
+            <span class="text-xs text-zinc-500">${full}</span>
+            <div class="flex-1 h-px bg-zinc-800"></div>
+          </div>
+          <div class="space-y-2.5">${cards}</div>
+        </div>
+      `;
+    }).join('');
+
+    historyList.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (confirm('Bu kaydı silmek istediğine emin misin?')) {
+          deleteEntry(btn.dataset.id);
+        }
+      });
+    });
+  }
+
+  searchInput.addEventListener('input', (e) => {
+    searchTerm = e.target.value;
+    renderHistory();
+  });
+
+  // --- Init ---
+  dateInput.value = todayISO();
+  addSetRow();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    });
+  }
+})();
+</script>
+</body>
+</html>
